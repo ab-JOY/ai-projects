@@ -13,7 +13,7 @@ session_id = os.getenv("SESSION_ID")
 researcher_agent = LlmAgent(
     name="ResearcherAgent",
     model=model,
-    instruction="Your task is to use 'google_search' tool to find all the relevant information about a given topic and write a comprehensive report about that topic.",
+    instruction="Your task is to use 'google_search' tool to find relevant information about the given topic. Summarize the key points and provide them in a concise format.",
     tools=[google_search],
     description="Researches about a topic",
     output_key="research_results"
@@ -22,7 +22,7 @@ researcher_agent = LlmAgent(
 writer = LlmAgent(
     name="WriterAgent",
     model=model,
-    instruction="Your task is to write a comprehensive article using this information: {research_results}. Make sure to expand on all the topics from the provided information.",
+    instruction="Your task is to write a comprehensive article using this information: {research_results}. Ensure the article is well-structured, informative, and engaging.",
     description="Write a comprehensive article based on the provided information",
     output_key="comprehensive_article"
 )
@@ -30,7 +30,7 @@ writer = LlmAgent(
 editor = LlmAgent(
     name="EditorAgent",
     model=model,
-    instruction="Your task is to edit a report: {comprehensive_article}. Perform a quality check on the text and improve it if necessary.",
+    instruction="Your task is to edit an article: {comprehensive_article}. Perform a quality check on the text and improve it if necessary.",
     description="Perform quality check on a written article",
     output_key="final_article"
 )
