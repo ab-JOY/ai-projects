@@ -187,7 +187,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 Allen Joy Bueza - [@allenjoybueza](www.linkedin.com/in/allenjoybueza) - allenjoybueza@gmail.com
 
-Project Link: [https://github.com/yourusername/writer-multi-agent-system](https://github.com/yourusername/writer-multi-agent-system)
+Project Link: [https://github.com/ab-JOY/ai-projects/blob/master/project-templates/writer-multi-agent](https://github.com/ab-JOY/ai-projects/blob/master/project-templates/writer-multi-agent)
 
 ---
 
