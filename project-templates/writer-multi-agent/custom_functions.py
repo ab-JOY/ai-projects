@@ -1,8 +1,60 @@
+import os
 from google.genai import types
-from custom_agents import pipeline_runner, session_service, user_id, session_id, app_name
+from google.adk.agents import LlmAgent, SequentialAgent
+from google.adk.tools import google_search
+from google.adk.sessions import InMemorySessionService
+from google.adk.runners import Runner
 
 async def run_writer_pipeline(topic: str):
+    model = os.getenv("GEMINI_MODEL_NAME", "gemini-2.5-pro")
+    app_name = os.getenv("APP_NAME", "WriterMultiAgent")
+    user_id = os.getenv("USER_ID", "default_user")
+    session_id = os.getenv("SESSION_ID", "default_session")
+    
+    # Define agents
+    researcher_agent = LlmAgent(
+        name="ResearcherAgent",
+        model=model,
+        instruction="Your task is to use 'google_search' tool to find relevant information about the given topic. Summarize the key points and provide them in a concise format.",
+        tools=[google_search],
+        description="Researches about a topic",
+        output_key="research_results"
+    )
 
+    writer = LlmAgent(
+        name="WriterAgent",
+        model=model,
+        instruction="Your task is to write a comprehensive article using this information: {research_results}. Ensure the article is well-structured, informative, and engaging.",
+        description="Write a comprehensive article based on the provided information",
+        output_key="comprehensive_article"
+    )
+
+    editor = LlmAgent(
+        name="EditorAgent",
+        model=model,
+        instruction="Your task is to edit an article: {comprehensive_article}. Perform a quality check on the text and improve it if necessary.",
+        description="Perform quality check on a written article",
+        output_key="final_article"
+    )
+
+    # Create the sequential pipeline
+    writer_pipeline = SequentialAgent(
+        name="WriterPipeline",
+        sub_agents=[researcher_agent, writer, editor],
+        description="A multi-agent pipeline that researches a topic, writes an article based on the research, and then edits the article for quality."
+    )
+
+
+    # Initialize Session Service
+    session_service = InMemorySessionService()
+
+    # Initialize Runner
+    pipeline_runner = Runner(
+        agent=writer_pipeline,
+        app_name=app_name,
+        session_service=session_service,
+    )
+    
     # Create or get session
     session = await session_service.create_session(
         app_name=app_name,
@@ -30,4 +82,4 @@ async def run_writer_pipeline(topic: str):
             content = event.content.parts[0].text
             output[author] = content
     
-    return output.get("EditorAgent", output)
+    return output

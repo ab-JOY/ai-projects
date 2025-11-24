@@ -1,3 +1,11 @@
+# This file is kept for backwards compatibility
+# All pipeline logic has been moved to custom_functions.py
+# to ensure dynamic session ID handling
+
+# If you need to import agents separately, they are now created
+# dynamically in custom_functions.run_writer_pipeline()
+
+
 import os
 from google.adk.agents import LlmAgent, SequentialAgent
 from google.adk.tools import google_search
