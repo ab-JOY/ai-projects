@@ -5,7 +5,6 @@ import uuid
 
 st.set_page_config(
     page_title="Writer Multi-Agent Chat",
-    page_icon="✍️",
     layout="centered"
 )
 

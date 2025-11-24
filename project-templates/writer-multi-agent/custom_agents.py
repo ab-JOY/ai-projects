@@ -1,9 +1,10 @@
-from google.adk.agents import LlmAgent, SequentialAgent
+from google.adk.agent import LlmAgent, SequentialAgent
 from google.adk.tools import google_search
 from google.adk.sessions import InMemorySessionService
 from google.adk.runners import Runner
 
 def create_writer_pipeline(model, app_name):
+    
     # Define agents
     researcher_agent = LlmAgent(
         name="ResearcherAgent",
