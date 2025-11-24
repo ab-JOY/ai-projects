@@ -3,149 +3,221 @@ import asyncio
 import os
 from custom_functions import run_writer_pipeline
 
-if hasattr(st, 'secrets'):
-    for key, value in st.secrets.items():
-        os.environ[key] = str(value)
-
 st.set_page_config(
-    page_title="Writer Multi-Agent System",
+    page_title="Writer Agent Chat",
     page_icon="✍️",
-    layout="wide"
+    layout="centered"
 )
 
-st.title("✍️ Writer Multi-Agent System")
-st.markdown("Generate well-researched articles using AI agents that research, write, and edit content.")
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+if "api_key_set" not in st.session_state:
+    st.session_state.api_key_set = False
+
+st.markdown("""
+<style>
+    .stChatMessage {
+        padding: 1rem;
+        border-radius: 0.5rem;
+    }
+    .agent-badge {
+        display: inline-block;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        margin-right: 0.5rem;
+    }
+    .researcher { background-color: #e3f2fd; color: #1976d2; }
+    .writer { background-color: #f3e5f5; color: #7b1fa2; }
+    .editor { background-color: #e8f5e9; color: #388e3c; }
+</style>
+""", unsafe_allow_html=True)
 
 with st.sidebar:
-    st.header("⚙️ Configuration")
-    st.info("Make sure your environment variables are set correctly before running.")
+    st.title("Configuration")
     
-    with st.expander("📋 Required Environment Variables"):
-        st.code("""
-GEMINI_MODEL_NAME
-APP_NAME
-USER_ID
-SESSION_ID
-GOOGLE_API_KEY
-GOOGLE_GENAI_USE_VERTEXAI
-GOOGLE_CLOUD_LOCATION
-GOOGLE_CLOUD_PROJECT
-        """)
+    # API Key input
+    api_key = st.text_input(
+        "Google API Key",
+        type="password",
+        help="Enter your Google API key for Gemini",
+        placeholder="AIza..."
+    )
+    
+    if api_key:
+        os.environ["GOOGLE_API_KEY"] = api_key
+        st.session_state.api_key_set = True
+        st.success("API Key set!")
+    else:
+        st.warning("Please enter your API key to continue")
     
     st.markdown("---")
-    st.markdown("### How it works")
-    st.markdown("""
-    1. 🔍 **Research**: Searches for relevant information
-    2. ✍️ **Write**: Creates comprehensive article
-    3. ✅ **Edit**: Refines and polishes content
-    """)
-
-topic = st.text_input(
-    "Enter a topic to research and write about:",
-    placeholder="e.g., The impact of artificial intelligence on healthcare"
-)
-
-col1, col2 = st.columns([1, 5])
-with col1:
-    generate_btn = st.button("🚀 Generate Article", type="primary", use_container_width=True)
-with col2:
-    if st.button("🗑️ Clear", use_container_width=True):
-        st.rerun()
-
-if generate_btn and topic:
-    tab1, tab2, tab3, tab4 = st.tabs(["📊 Progress", "🔍 Research", "✍️ Draft", "✅ Final Article"])
     
-    with tab1:
-        st.subheader("Generation Progress")
-        progress_bar = st.progress(0)
-        status_text = st.empty()
+    # Other environment variables
+    with st.expander("Advanced Settings"):
+        model_name = st.text_input("Model Name", value="gemini-2.5-pro")
+        app_name = st.text_input("App Name", value="WriterMultiAgent")
+        user_id = st.text_input("User ID", value="demo_user")
+        session_id = st.text_input("Session ID", value="demo_session")
+        
+        use_vertex = st.selectbox("Use Vertex AI", ["False", "True"])
+        cloud_location = st.text_input("Cloud Location", value="us-central1")
+        cloud_project = st.text_input("Cloud Project ID", value="")
+        
+        if st.button("Apply Settings"):
+            os.environ["GEMINI_MODEL_NAME"] = model_name
+            os.environ["APP_NAME"] = app_name
+            os.environ["USER_ID"] = user_id
+            os.environ["SESSION_ID"] = session_id
+            os.environ["GOOGLE_GENAI_USE_VERTEXAI"] = use_vertex
+            os.environ["GOOGLE_CLOUD_LOCATION"] = cloud_location
+            if cloud_project:
+                os.environ["GOOGLE_CLOUD_PROJECT"] = cloud_project
+            st.success("Settings applied!")
+    
+    st.markdown("---")
+    
+    st.markdown("""
+    ### How it works:
+    1. **Researcher** searches for information
+    2. **Writer** creates the article
+    3. **Editor** refines the content
+    """)
+    
+    if st.button("Clear Chat History"):
+        st.session_state.messages = []
+        st.rerun()
+    
+    st.markdown("---")
+    st.markdown("""
+    <div style='text-align: center; font-size: 0.8rem;'>
+        <p>Built with Google ADK & Gemini<br/>
+        <a href='https://github.com/ab-JOY/ai-projects/tree/master/project-templates/writer-multi-agent'>GitHub</a></p>
+    </div>
+    """, unsafe_allow_html=True)
 
-        status_text.text("🔍 Researching the topic...")
-        progress_bar.progress(33)
+st.title("Writer Agent Chat")
+st.caption("Generate well-researched articles through conversational AI agents")
+
+
+for message in st.session_state.messages:
+    with st.chat_message(message["role"], avatar=message.get("avatar", None)):
+        st.markdown(message["content"])
+
+if prompt := st.chat_input("What topic would you like me to write about?", disabled=not st.session_state.api_key_set):
+    st.session_state.messages.append({
+        "role": "user",
+        "content": prompt,
+        "avatar": "👤"
+    })
+
+    with st.chat_message("user", avatar="👤"):
+        st.markdown(prompt)
+    
+    with st.chat_message("assistant", avatar="🤖"):
+        message_placeholder = st.empty()
+
+        message_placeholder.markdown("**Researching your topic...**")
         
         try:
-            result = asyncio.run(run_writer_pipeline(topic))
-    
-            status_text.text("✍️ Writing the article...")
-            progress_bar.progress(66)
 
-            status_text.text("✅ Editing and refining...")
-            progress_bar.progress(100)
+            result = asyncio.run(run_writer_pipeline(prompt))
+
+            full_response = ""
             
-            status_text.text("✅ Complete!")
-     
             if isinstance(result, dict):
-                with tab2:
-                    st.subheader("Research Summary")
-                    research = result.get("ResearcherAgent", "No research data available")
-                    st.markdown(research)
-                    st.download_button(
-                        "📥 Download Research",
-                        research,
-                        file_name="research_summary.txt",
-                        mime="text/plain"
-                    )
-                
-                with tab3:
-                    st.subheader("Draft Article")
-                    draft = result.get("WriterAgent", "No draft available")
-                    st.markdown(draft)
-                    st.download_button(
-                        "📥 Download Draft",
-                        draft,
-                        file_name="draft_article.txt",
-                        mime="text/plain"
-                    )
-                
-                with tab4:
-                    st.subheader("Final Article")
-                    final = result.get("EditorAgent", result)
-                    st.markdown(final)
+                if "ResearcherAgent" in result:
+                    message_placeholder.markdown("**Research completed!** Now writing...\n\n")
+                    research_preview = result["ResearcherAgent"][:300] + "..." if len(result["ResearcherAgent"]) > 300 else result["ResearcherAgent"]
                     
-                    col1, col2 = st.columns(2)
+                if "WriterAgent" in result:
+                    message_placeholder.markdown("**Article drafted!** Now editing...\n\n")
+                
+                if "EditorAgent" in result:
+                    full_response = f"**Article Complete!**\n\n---\n\n{result['EditorAgent']}\n\n---\n\n"
+        
+                    with st.expander("View Research Summary"):
+                        st.markdown(result.get("ResearcherAgent", "No research data available"))
+                    
+                    with st.expander("View Draft Article"):
+                        st.markdown(result.get("WriterAgent", "No draft available"))
+  
+                    col1, col2, col3 = st.columns(3)
                     with col1:
                         st.download_button(
-                            "📥 Download as Text",
-                            final if isinstance(final, str) else str(final),
-                            file_name="final_article.txt",
+                            "Research",
+                            result.get("ResearcherAgent", ""),
+                            file_name="research.txt",
                             mime="text/plain",
                             use_container_width=True
                         )
                     with col2:
                         st.download_button(
-                            "📥 Download as Markdown",
-                            final if isinstance(final, str) else str(final),
+                            "Draft",
+                            result.get("WriterAgent", ""),
+                            file_name="draft.txt",
+                            mime="text/plain",
+                            use_container_width=True
+                        )
+                    with col3:
+                        st.download_button(
+                            "Final",
+                            result["EditorAgent"],
                             file_name="final_article.md",
                             mime="text/markdown",
                             use_container_width=True
                         )
+                else:
+                    full_response = f"**Article Complete!**\n\n---\n\n{result.get('WriterAgent', result)}"
             else:
-                with tab4:
-                    st.markdown(result)
-                    st.download_button(
-                        "📥 Download Article",
-                        str(result),
-                        file_name="article.txt",
-                        mime="text/plain"
-                    )
+                full_response = f"**Article Complete!**\n\n---\n\n{str(result)}"
             
-            st.success("Article generated successfully!")
+            message_placeholder.markdown(full_response)
+            
+
+            st.session_state.messages.append({
+                "role": "assistant",
+                "content": full_response,
+                "avatar": "🤖"
+            })
             
         except Exception as e:
-            st.error(f"An error occurred: {str(e)}")
-            st.exception(e)
+            error_message = f"**Error occurred:**\n\n```\n{str(e)}\n```\n\nPlease check your API key and try again."
+            message_placeholder.markdown(error_message)
+            
+            # Add error to chat history
+            st.session_state.messages.append({
+                "role": "assistant",
+                "content": error_message,
+                "avatar": "🤖"
+            })
 
-elif generate_btn and not topic:
-    st.warning("Please enter a topic first!")
-
-
-st.markdown("---")
-st.markdown(
-    """
-    <div style='text-align: center'>
-        <p>Built with Google ADK & Gemini AI | 
-        <a href='https://github.com/ab-JOY/ai-projects/tree/master/project-templates/writer-multi-agent'>GitHub</a></p>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+# Show helpful message if no API key
+if not st.session_state.api_key_set and len(st.session_state.messages) == 0:
+    st.info("Please enter your Google API Key in the sidebar to get started!")
+    
+    with st.expander("How to get a Google API Key"):
+        st.markdown("""
+        1. Go to [Google AI Studio](https://makersuite.google.com/app/apikey)
+        2. Click "Create API Key"
+        3. Copy your API key
+        4. Paste it in the sidebar
+        
+        **Note:** Keep your API key secure and never share it publicly!
+        """)
+    
+    st.markdown("---")
+    st.markdown("### Example topics to try:")
+    example_topics = [
+        "The future of renewable energy",
+        "How artificial intelligence is transforming healthcare",
+        "The impact of remote work on productivity",
+        "Sustainable agriculture practices"
+    ]
+    
+    cols = st.columns(2)
+    for idx, topic in enumerate(example_topics):
+        with cols[idx % 2]:
+            if st.button(topic, key=f"example_{idx}", disabled=not st.session_state.api_key_set):
+                st.rerun()
