@@ -1,10 +1,11 @@
 import streamlit as st
 import asyncio
 import os
-from custom_functions import run_writer_pipeline
+import uuid
 
 st.set_page_config(
     page_title="Writer Multi-Agent Chat",
+    page_icon="✍️",
     layout="centered"
 )
 
@@ -13,7 +14,6 @@ if "messages" not in st.session_state:
 if "api_key_set" not in st.session_state:
     st.session_state.api_key_set = False
 if "unique_session_id" not in st.session_state:
-    import uuid
     st.session_state.unique_session_id = f"session_{uuid.uuid4().hex[:16]}"
 
 if "SESSION_ID" not in os.environ:
@@ -28,6 +28,17 @@ if "GOOGLE_GENAI_USE_VERTEXAI" not in os.environ:
     os.environ["GOOGLE_GENAI_USE_VERTEXAI"] = "False"
 if "GOOGLE_CLOUD_LOCATION" not in os.environ:
     os.environ["GOOGLE_CLOUD_LOCATION"] = "us-central1"
+
+if hasattr(st, 'secrets'):
+    for key, value in st.secrets.items():
+        os.environ[key] = str(value)
+
+try:
+    from custom_functions import run_writer_pipeline
+    IMPORTS_AVAILABLE = True
+except ImportError as e:
+    IMPORTS_AVAILABLE = False
+    IMPORT_ERROR = str(e)
 
 st.markdown("""
 <style>
@@ -48,6 +59,11 @@ st.markdown("""
     .editor { background-color: #e8f5e9; color: #388e3c; }
 </style>
 """, unsafe_allow_html=True)
+
+if not IMPORTS_AVAILABLE:
+    st.error(f"Missing required dependencies: {IMPORT_ERROR}")
+    st.info("Please make sure `google-adk` is installed in your requirements.txt")
+    st.stop()
 
 with st.sidebar:
     st.title("Configuration")
@@ -93,7 +109,7 @@ with st.sidebar:
     st.markdown("---")
     
     st.markdown("""
-    ### How it works:
+    ###How it works:
     1. **Researcher** searches for information
     2. **Writer** creates the article
     3. **Editor** refines the content
@@ -124,7 +140,7 @@ if prompt := st.chat_input("What topic would you like me to write about?", disab
         "content": prompt,
         "avatar": "👤"
     })
-    
+
     with st.chat_message("user", avatar="👤"):
         st.markdown(prompt)
     
@@ -142,13 +158,13 @@ if prompt := st.chat_input("What topic would you like me to write about?", disab
                 if "ResearcherAgent" in result:
                     message_placeholder.markdown("**Research completed!** Now writing...\n\n")
                     research_preview = result["ResearcherAgent"][:300] + "..." if len(result["ResearcherAgent"]) > 300 else result["ResearcherAgent"]
- 
+                    
                 if "WriterAgent" in result:
                     message_placeholder.markdown("**Article drafted!** Now editing...\n\n")
-
+    
                 if "EditorAgent" in result:
                     full_response = f"**Article Complete!**\n\n---\n\n{result['EditorAgent']}\n\n---\n\n"
-                    
+
                     with st.expander("View Research Summary"):
                         st.markdown(result.get("ResearcherAgent", "No research data available"))
                     
@@ -217,7 +233,7 @@ if not st.session_state.api_key_set and len(st.session_state.messages) == 0:
         """)
     
     st.markdown("---")
-    st.markdown("### Example topics to try:")
+    st.markdown("###Example topics to try:")
     example_topics = [
         "The future of renewable energy",
         "How artificial intelligence is transforming healthcare",
