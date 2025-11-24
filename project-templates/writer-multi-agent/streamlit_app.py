@@ -4,8 +4,7 @@ import os
 from custom_functions import run_writer_pipeline
 
 st.set_page_config(
-    page_title="Writer Agent Chat",
-    page_icon="✍️",
+    page_title="Writer Multi-Agent Chat",
     layout="centered"
 )
 
@@ -13,6 +12,22 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 if "api_key_set" not in st.session_state:
     st.session_state.api_key_set = False
+if "unique_session_id" not in st.session_state:
+    import uuid
+    st.session_state.unique_session_id = f"session_{uuid.uuid4().hex[:16]}"
+
+if "SESSION_ID" not in os.environ:
+    os.environ["SESSION_ID"] = st.session_state.unique_session_id
+if "USER_ID" not in os.environ:
+    os.environ["USER_ID"] = f"user_{st.session_state.unique_session_id[:8]}"
+if "APP_NAME" not in os.environ:
+    os.environ["APP_NAME"] = "WriterMultiAgent"
+if "GEMINI_MODEL_NAME" not in os.environ:
+    os.environ["GEMINI_MODEL_NAME"] = "gemini-2.5-pro"
+if "GOOGLE_GENAI_USE_VERTEXAI" not in os.environ:
+    os.environ["GOOGLE_GENAI_USE_VERTEXAI"] = "False"
+if "GOOGLE_CLOUD_LOCATION" not in os.environ:
+    os.environ["GOOGLE_CLOUD_LOCATION"] = "us-central1"
 
 st.markdown("""
 <style>
@@ -37,7 +52,6 @@ st.markdown("""
 with st.sidebar:
     st.title("Configuration")
     
-    # API Key input
     api_key = st.text_input(
         "Google API Key",
         type="password",
@@ -54,12 +68,12 @@ with st.sidebar:
     
     st.markdown("---")
     
-    # Other environment variables
     with st.expander("Advanced Settings"):
         model_name = st.text_input("Model Name", value="gemini-2.5-pro")
         app_name = st.text_input("App Name", value="WriterMultiAgent")
-        user_id = st.text_input("User ID", value="demo_user")
-        session_id = st.text_input("Session ID", value="demo_session")
+        user_id = st.text_input("User ID", value=f"user_{st.session_state.unique_session_id[:8]}")
+        
+        st.text_input("Session ID (Auto-generated)", value=st.session_state.unique_session_id, disabled=True)
         
         use_vertex = st.selectbox("Use Vertex AI", ["False", "True"])
         cloud_location = st.text_input("Cloud Location", value="us-central1")
@@ -69,7 +83,7 @@ with st.sidebar:
             os.environ["GEMINI_MODEL_NAME"] = model_name
             os.environ["APP_NAME"] = app_name
             os.environ["USER_ID"] = user_id
-            os.environ["SESSION_ID"] = session_id
+            os.environ["SESSION_ID"] = st.session_state.unique_session_id
             os.environ["GOOGLE_GENAI_USE_VERTEXAI"] = use_vertex
             os.environ["GOOGLE_CLOUD_LOCATION"] = cloud_location
             if cloud_project:
@@ -100,7 +114,6 @@ with st.sidebar:
 st.title("Writer Agent Chat")
 st.caption("Generate well-researched articles through conversational AI agents")
 
-
 for message in st.session_state.messages:
     with st.chat_message(message["role"], avatar=message.get("avatar", None)):
         st.markdown(message["content"])
@@ -111,38 +124,37 @@ if prompt := st.chat_input("What topic would you like me to write about?", disab
         "content": prompt,
         "avatar": "👤"
     })
-
+    
     with st.chat_message("user", avatar="👤"):
         st.markdown(prompt)
     
     with st.chat_message("assistant", avatar="🤖"):
         message_placeholder = st.empty()
-
+        
         message_placeholder.markdown("**Researching your topic...**")
         
         try:
-
             result = asyncio.run(run_writer_pipeline(prompt))
-
+            
             full_response = ""
             
             if isinstance(result, dict):
                 if "ResearcherAgent" in result:
                     message_placeholder.markdown("**Research completed!** Now writing...\n\n")
                     research_preview = result["ResearcherAgent"][:300] + "..." if len(result["ResearcherAgent"]) > 300 else result["ResearcherAgent"]
-                    
+ 
                 if "WriterAgent" in result:
                     message_placeholder.markdown("**Article drafted!** Now editing...\n\n")
-                
+
                 if "EditorAgent" in result:
                     full_response = f"**Article Complete!**\n\n---\n\n{result['EditorAgent']}\n\n---\n\n"
-        
+                    
                     with st.expander("View Research Summary"):
                         st.markdown(result.get("ResearcherAgent", "No research data available"))
                     
                     with st.expander("View Draft Article"):
                         st.markdown(result.get("WriterAgent", "No draft available"))
-  
+
                     col1, col2, col3 = st.columns(3)
                     with col1:
                         st.download_button(
@@ -175,7 +187,6 @@ if prompt := st.chat_input("What topic would you like me to write about?", disab
             
             message_placeholder.markdown(full_response)
             
-
             st.session_state.messages.append({
                 "role": "assistant",
                 "content": full_response,
@@ -185,15 +196,13 @@ if prompt := st.chat_input("What topic would you like me to write about?", disab
         except Exception as e:
             error_message = f"**Error occurred:**\n\n```\n{str(e)}\n```\n\nPlease check your API key and try again."
             message_placeholder.markdown(error_message)
-            
-            # Add error to chat history
+
             st.session_state.messages.append({
                 "role": "assistant",
                 "content": error_message,
                 "avatar": "🤖"
             })
 
-# Show helpful message if no API key
 if not st.session_state.api_key_set and len(st.session_state.messages) == 0:
     st.info("Please enter your Google API Key in the sidebar to get started!")
     
