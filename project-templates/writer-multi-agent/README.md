@@ -51,7 +51,9 @@ Final Output
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/writer-multi-agent-system.git
+git clone https://github.com/ab-JOY/ai-projects.git
+cd ai-projects
+cd project-templates
 cd writer-multi-agent-system
 ```
 
