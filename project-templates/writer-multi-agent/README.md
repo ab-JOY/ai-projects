@@ -1,6 +1,6 @@
 # Writer Multi-Agent System
 
-A multi-agent system built with Google's Agent Development Kit (ADK) that automates the process of researching, writing, and editing high-quality articles on any given topic.
+A sophisticated multi-agent system built with Google's Agent Development Kit (ADK) that automates the process of researching, writing, and editing high-quality articles on any given topic.
 
 ## Overview
 
@@ -187,9 +187,9 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## Contact
 
-Allen Joy Bueza - [@allenjoybueza](www.linkedin.com/in/allenjoybueza) - allenjoybueza@gmail.com
+Your Name - [@yourtwitter](https://twitter.com/yourtwitter) - email@example.com
 
-Project Link: [https://github.com/ab-JOY/ai-projects/blob/master/project-templates/writer-multi-agent](https://github.com/ab-JOY/ai-projects/blob/master/project-templates/writer-multi-agent)
+Project Link: [https://github.com/yourusername/writer-multi-agent-system](https://github.com/yourusername/writer-multi-agent-system)
 
 ---
 
