@@ -1,7 +1,7 @@
 import os
 from google.adk.agents.llm_agent import Agent
 from google.adk.tools import FunctionTool
-from custom_functions import run_writer_pipeline
+from .custom_functions import run_writer_pipeline
 
 model = os.getenv("GEMINI_MODEL_NAME", "gemini-2.5-pro")
 
